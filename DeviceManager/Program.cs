@@ -1,14 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using DeviceManager.Properties;
-using SharpAdbClient;
 
 namespace DeviceManager
 {
@@ -29,28 +28,40 @@ namespace DeviceManager
 
             menu.Popup += (sender, args) =>
             {
-                var client = new SharpAdbClient.AdbClient();
-                var devices = client.GetDevices();
+                //var client = new AdbClient();
+                var client = new AdbManager(Settings.Default.ScrCpyPath);
 
                 menu.MenuItems.Clear();
-
                 menu.MenuItems.Add(new MenuItem("Set srccpy path", (o, eventArgs) => { ChooseScrPath(); }));
 
-                if (CanViewDevices())
+                try
                 {
-                    var viewMenu = devices.Select(device =>
-                            new MenuItem(device.Model, (o, eventArgs) => { ViewDevice(device); }))
-                        .ToArray();
+                    var devices = client.GetDevices();
 
-                    menu.MenuItems.Add(new MenuItem("View", viewMenu));
+                    if (CanViewDevices())
+                    {
+                        var viewMenu = devices.Select(device =>
+                                new MenuItem(device.Model, (o, eventArgs) => { ViewDevice(device); }))
+                            .ToArray();
+
+                        menu.MenuItems.Add(new MenuItem("View", viewMenu));
+                    }
+
+                    var restartMenu = devices.Select(device => new MenuItem(device.Model,
+                        (o, eventArgs) => { RestartAction(client, device); })).ToArray();
+
+                    menu.MenuItems.Add(new MenuItem("Restart", restartMenu));
                 }
+                catch
+                {
+                    TryRestartAdb();
 
-                var restartMenu = devices.Select(device => new MenuItem(device.Model,
-                    (o, eventArgs) => { RestartAction(client, device); })).ToArray();
-
-                menu.MenuItems.Add(new MenuItem("Restart", restartMenu));
-
-                menu.MenuItems.Add(new MenuItem("Exit", (o, eventArgs) => { Application.Exit(); }));
+                    menu.MenuItems.Add(new MenuItem("Cannot connect to adb server", (o, eventArgs) => { }));
+                }
+                finally
+                {
+                    menu.MenuItems.Add(new MenuItem("Exit", (o, eventArgs) => { Application.Exit(); }));
+                }
 
             };
             // Show the system tray icon.
@@ -63,6 +74,29 @@ namespace DeviceManager
             }
         }
 
+        private static void TryRestartAdb()
+        {
+            try
+            {
+                var adb = Path.Combine(Settings.Default.ScrCpyPath, "adb.exe");
+                if (File.Exists(adb))
+                {
+                    var process = Process.Start(new ProcessStartInfo(adb, "reconnect")
+                    {
+                        UseShellExecute = true,
+                        RedirectStandardOutput = true
+                    });
+
+                    process.OutputDataReceived += (sender, args) => { Debug.WriteLine(args.Data); };
+                    process.WaitForExit();
+                }
+            }
+            catch
+            {
+                /* om om om */
+            }
+        }
+
         private static void SetScrPath()
         {
             if (File.Exists("scrcpy-noconsole.exe") && string.IsNullOrEmpty(Settings.Default.ScrCpyPath))
@@ -72,9 +106,9 @@ namespace DeviceManager
             }
         }
 
-        private static void RestartAction(AdbClient client, DeviceData device)
+        private static void RestartAction(AdbManager client, DeviceData device)
         {
-            client.Reboot("device", device);
+            client.Reboot(device);
 
             Task.Factory.StartNew(async () =>
             {
