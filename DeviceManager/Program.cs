@@ -28,7 +28,6 @@ namespace DeviceManager
 
             menu.Popup += (sender, args) =>
             {
-                //var client = new AdbClient();
                 var client = new AdbManager(Settings.Default.ScrCpyPath);
 
                 menu.MenuItems.Clear();
@@ -41,10 +40,17 @@ namespace DeviceManager
                     if (CanViewDevices())
                     {
                         var viewMenu = devices.Select(device =>
-                                new MenuItem(device.Model, (o, eventArgs) => { ViewDevice(device); }))
+                                new MenuItem(device.Model, (o, _) => { ViewDevice(device); }))
                             .ToArray();
 
                         menu.MenuItems.Add(new MenuItem("View", viewMenu));
+                        menu.MenuItems.Add(new MenuItem("View all", (o, _) =>
+                        {
+                            foreach (var deviceData in devices)
+                            {
+                                ViewDevice(deviceData);
+                            }
+                        }));
                     }
 
                     var restartMenu = devices.Select(device => new MenuItem(device.Model,
