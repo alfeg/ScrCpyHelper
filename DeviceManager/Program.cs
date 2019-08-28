@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using DeviceManager.Properties;
@@ -40,7 +41,7 @@ namespace DeviceManager
                     if (CanViewDevices())
                     {
                         var viewMenu = devices.Select(device =>
-                                new MenuItem(device.Model, (o, _) => { ViewDevice(device); }))
+                                new MenuItem(device.Model + " - " + device.Serial, (o, _) => { ViewDevice(device, false); }))
                             .ToArray();
 
                         menu.MenuItems.Add(new MenuItem("View", viewMenu));
@@ -48,12 +49,21 @@ namespace DeviceManager
                         {
                             foreach (var deviceData in devices)
                             {
-                                ViewDevice(deviceData);
+                                Thread.Sleep(1500);
+                                ViewDevice(deviceData, false);
+                            }
+                        }));
+                        menu.MenuItems.Add(new MenuItem("View all in mirror mode", (o, _) =>
+                        {
+                            foreach (var deviceData in devices)
+                            {
+                                Thread.Sleep(1500);
+                                ViewDevice(deviceData, true);
                             }
                         }));
                     }
 
-                    var restartMenu = devices.Select(device => new MenuItem(device.Model,
+                    var restartMenu = devices.Select(device => new MenuItem(device.Model + " - " + device.Serial,
                         (o, eventArgs) => { RestartAction(client, device); })).ToArray();
 
                     menu.MenuItems.Add(new MenuItem("Restart", restartMenu));
@@ -70,6 +80,7 @@ namespace DeviceManager
                 }
 
             };
+
             // Show the system tray icon.
             using (var pi = new ProcessIcon(menu))
             {
@@ -126,7 +137,7 @@ namespace DeviceManager
                     if (targetDevice != null && targetDevice.State == DeviceState.Online)
                     {
                         await Task.Delay(TimeSpan.FromSeconds(5));
-                        ViewDevice(targetDevice);
+                        ViewDevice(targetDevice, false);
                         return;
                     }
                 }
@@ -161,16 +172,49 @@ namespace DeviceManager
             return File.Exists(scr);
         }
 
-        private static void ViewDevice(DeviceData device)
+        private static void Log(string message)
+        {
+            File.AppendAllLines("log.log", new [] { message});
+        }
+
+        private static void ViewDevice(DeviceData device, bool mirror, int? bitrate = null)
         {
             var scr = Path.Combine(Settings.Default.ScrCpyPath, "scrcpy-noconsole.exe");
-            var processStartInfo = new ProcessStartInfo(scr, "-t -s " + device.Serial)
+
+            var args = new[]
             {
-                UseShellExecute = false,
+                mirror ? "--no-control" : "",
+                "-s " + device.Serial,
+                //"--window-title \"" + device.Model + " - " + device.Serial + "\"",
+                bitrate == null ? "" : "-b " + bitrate
+            };
+
+            var arguments = string.Join(" ", args.Where(x => !string.IsNullOrWhiteSpace(x)));
+
+            var processStartInfo = new ProcessStartInfo(scr, arguments)
+            {
+                UseShellExecute = true,
                 WorkingDirectory = Settings.Default.ScrCpyPath
             };
 
-            Process.Start(processStartInfo);
+            Log($"ViewDevice: {device.Model} - {device.Serial}. Args: {arguments}");
+
+            var process = Process.Start(processStartInfo);
+
+            if (process != null)
+            {
+                process.Exited += (sender, eventArgs) =>
+                {
+                    //// only restart once, do not go crazy if device cannot be viewed
+                    //if (bitrate == null)
+                    //{
+                    //    if (process.ExitCode != 0)
+                    //    {
+                    //        ViewDevice(device, mirror, bitrate: 80000);
+                    //    }
+                    //}
+                };
+            }
         }
 
         private static void RestoreConfig()

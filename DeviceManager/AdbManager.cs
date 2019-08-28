@@ -29,6 +29,8 @@ namespace DeviceManager
                     continue;
                 }
 
+                if(!line.Contains("device")) continue;
+
                 if(skipping) continue;
 
                 if(string.IsNullOrWhiteSpace(line)) continue;
