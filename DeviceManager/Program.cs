@@ -32,7 +32,7 @@ namespace DeviceManager
                 var client = new AdbManager(Settings.Default.ScrCpyPath);
 
                 menu.MenuItems.Clear();
-                menu.MenuItems.Add(new MenuItem("Set srccpy path", (o, eventArgs) => { ChooseScrPath(); }));
+                menu.MenuItems.Add(new MenuItem("Set scrcpy path", (o, eventArgs) => { ChooseScrPath(); }));
 
                 try
                 {
