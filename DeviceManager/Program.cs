@@ -50,6 +50,7 @@ namespace DeviceManager
                             foreach (var deviceData in devices)
                             {
                                 Thread.Sleep(1500);
+                                client.WakeUp(deviceData);
                                 ViewDevice(deviceData, false);
                             }
                         }));
@@ -179,6 +180,7 @@ namespace DeviceManager
 
         private static void ViewDevice(DeviceData device, bool mirror, int? bitrate = null)
         {
+
             var scr = Path.Combine(Settings.Default.ScrCpyPath, "scrcpy-noconsole.exe");
 
             var args = new[]
