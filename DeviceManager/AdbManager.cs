@@ -78,7 +78,7 @@ namespace DeviceManager
                 res = (String.Empty, String.Empty);
                 return false;
             }
-            
+
             foreach (var line in result)
             {
                 if (TryParse(line, out var kv))
@@ -95,6 +95,11 @@ namespace DeviceManager
         public void Reboot(DeviceData device)
         {
             ConsoleExeRunner.Execute(adb, $"-s {device.Serial} reboot");
+        }
+
+        public void WakeUp(DeviceData device)
+        {
+            ConsoleExeRunner.Execute(adb, $"-s {device.Serial} shell input keyevent KEYCODE_POWER");
         }
     }
 }
