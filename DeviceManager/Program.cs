@@ -158,7 +158,7 @@ namespace DeviceManager
 
                 if (result == DialogResult.OK && !string.IsNullOrWhiteSpace(fbd.SelectedPath))
                 {
-                    if (File.Exists(Path.Combine(fbd.SelectedPath, "scrcpy-noconsole.exe")))
+                    if (File.Exists(Path.Combine(fbd.SelectedPath, "scrcpy.exe")))
                     {
                         Settings.Default.ScrCpyPath = fbd.SelectedPath;
                         Settings.Default.Save();
@@ -169,7 +169,7 @@ namespace DeviceManager
 
         private static bool CanViewDevices()
         {
-            var scr = Path.Combine(Settings.Default.ScrCpyPath, "scrcpy-noconsole.exe");
+            var scr = Path.Combine(Settings.Default.ScrCpyPath, "scrcpy.exe");
             return File.Exists(scr);
         }
 
@@ -181,7 +181,7 @@ namespace DeviceManager
         private static void ViewDevice(DeviceData device, bool mirror, int? bitrate = null)
         {
 
-            var scr = Path.Combine(Settings.Default.ScrCpyPath, "scrcpy-noconsole.exe");
+            var scr = Path.Combine(Settings.Default.ScrCpyPath, "scrcpy.exe");
 
             var args = new[]
             {
